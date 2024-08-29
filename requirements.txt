@@ -1,2 +1,11 @@
 groq
 python-dotenv
+langchain
+ollama
+chromadb
+tiktoken
+langchain-groq
+langchain-community
+bs4
+langchain_ollama
+langchain_huggingface

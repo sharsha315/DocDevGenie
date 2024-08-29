@@ -1,21 +1,107 @@
 import os
+import bs4
 from groq import Groq
 from dotenv import load_dotenv
+from langchain_groq import ChatGroq
+from langchain.chains import RetrievalQA
+from langchain_community.document_loaders import WebBaseLoader
 
+#from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+#from langchain.callbacks.manager import CallbackManager
+
+#from langchain_community.embeddings.ollama import OllamaEmbeddings
+
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import Chroma
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.prompts import PromptTemplate
+
+#from langchain_ollama import OllamaEmbeddings
+
+#from langchain.memory import ConversationBufferMemory
+
+# Load environment variables from .env file
 load_dotenv()
 
-client = Groq(
-    api_key=os.environ.get("GROQ_API_KEY"),
+# 1.1 - Indexing - Load
+
+# Only keep post title, headers, and content from the full HTML.
+
+#bs4_strainer = bs4.SoupStrainer(class_=("post-title", "post-header", "post-content"))
+url = "https://react.dev/reference/react/act"
+loader = WebBaseLoader(url)
+docs = loader.load()
+
+print(len(docs[0].page_content))
+
+# 1.2 - Indexing - Split
+text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000, chunk_overlap=200, add_start_index=True
+)
+all_splits = text_splitter.split_documents(docs)
+
+print(len(all_splits))
+print(len(all_splits[0].page_content))
+print(all_splits[10].metadata)
+
+# 1.3 - Indexing - Store
+
+# Embeddings
+modelPath = "intfloat/e5-large-unsupervised"
+embeddings = HuggingFaceEmbeddings(
+  model_name = modelPath, 
+  #encode_kwargs={'normalize_embeddings':False},
 )
 
-chat_completion = client.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "Explain the importance of fast language models",
-        }
-    ],
-    model="llama3-8b-8192",
+# vectorstore
+vectorstore = Chroma.from_documents(
+    documents=all_splits, 
+    embedding=embeddings
 )
 
-print(chat_completion.choices[0].message.content)
+# 2.1 - Retreival and Generation - Retrieve
+retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+
+#retrieved_docs = retriever.invoke("What is act?")
+#print(retrieved_docs)
+#print(retrieved_docs[0].page_content)
+
+# 2.2 - Generation
+
+# Initializing GROQ API KEY
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Initialize ChatGroq
+llm = ChatGroq(
+    temperature=0,
+    model="llama3-70b-8192",
+    api_key=GROQ_API_KEY
+)
+
+prompt_template = """Use the following pieces of context to answer the question at the end.
+If you don't know the answer, just say that you don't know, don't try to make up an answer.
+Use one or two sentences maximum and keep the answer as concise as possible.
+
+{context}
+
+Question: {question}
+
+Helpful Answer:"""
+
+prompt = PromptTemplate.from_template(prompt_template)
+
+# Retrieval Chain
+qa_chain = RetrievalQA.from_chain_type(
+    llm,
+    retriever=retriever,
+    chain_type_kwargs={"prompt": prompt},
+    return_source_documents=True
+)
+
+#Query
+query = "What is act?"
+result = qa_chain.invoke({"query": query})
+
+print(result['result'])
+
+
