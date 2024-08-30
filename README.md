@@ -70,12 +70,14 @@ python app.py
 
 ## Demo Snapshot
 Here's a sample interaction with DocDevGenie:
-![DocDevGenie Demo](/workspace/DocDevGenie/DocDevGenie_output_snapshot.PNG)
+![DocDevGenie Demo](DocDevGenie_output_snapshot.PNG)
+
+### Note - DATASET ACCESS
+Running an Actor might take time, depending on the Actor's complexity and the amount of data it processes. If you want only to get data and have an immediate response you should access the existing dataset of the finished Actor run.
 
 ## Contributing
 Feel free to contribute by opening issues or creating pull requests. Your input is always welcome!
 
 ## License
-This project is licensed under the MIT License. See the [LICENSE](/workspace/DocDevGenie/LICENSE) file for details.
-
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
