@@ -10,8 +10,6 @@ from langchain_community.document_loaders import ApifyDatasetLoader
 from langchain_core.document_loaders.base import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
-#from langchain_community.utilities import ApifyWrapper
-
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,34 +21,25 @@ url = "https://react.dev/reference/react"
 
 apify = ApifyClient(APIFY_API_TOKEN)
 
-# apify_actor = apify.actor('apify/website-content-crawler').call(
-#     run_input = {"startUrls": [{"url": url}]}
-# )
+apify_actor = apify.actor('apify/website-content-crawler').call(
+    run_input = {"startUrls": [{"url": url}]}
+)
 
-# # Save data to vector database
-# loader = ApifyDatasetLoader(
-#     dataset_id=apify_actor['defaultDatasetId'],
-#     dataset_mapping_function=lambda item: Document(
-#         page_content=item['text'] or '', metadata={'source': item['url']}
-#     ),
-# )
-
+# Save data to vector database
+loader = ApifyDatasetLoader(
+    dataset_id=apify_actor['defaultDatasetId'],
+    dataset_mapping_function=lambda item: Document(
+        page_content=item['text'] or '', metadata={'source': item['url']}
+    ),
+)
 
 # Fetch data from an existing Apify dataset.
 # loader = ApifyDatasetLoader(
-#     dataset_id="your datasetID",
+#     dataset_id="your datasetID", # datasetID is obtained from Apify console after running Apify actor
 #     dataset_mapping_function=lambda item: Document(
 #         page_content=item["Text"] or "", metadata={"source": item["Link"]}
 #     ),
 # )
-
-#Fetch data from an existing Apify dataset.
-loader = ApifyDatasetLoader(
-    dataset_id="88Xa6tAKWpa1Cg39W",
-    dataset_mapping_function=lambda item: Document(
-        page_content=item["text"] or "", metadata={"source": item["url"]}
-    ),
-)
 
 documents = loader.load()
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=100)
@@ -67,9 +56,9 @@ embeddings = HuggingFaceEmbeddings(
 vectorstore = Chroma.from_documents(
     documents=docs, 
     embedding=embeddings,
-    persist_directory='db2',
+    #persist_directory='db2',
 )
-vectorstore.persist()
+#vectorstore.persist()
 
 retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
@@ -103,8 +92,21 @@ qa_chain = RetrievalQA.from_chain_type(
     return_source_documents=True
 )
 
-#Query
-query = "What is act api?"
-result = qa_chain.invoke({"query": query})
+# Main function
+def main():
+    os.system("clear")
+    print("Welcome!!!")
+    print("I am DocDevGenie - Always-Updated API Assistance for Developers")
+    print("\nAsk your question (or type 'exit' to quit): ")
 
-print(result['result'])
+    while True:
+        user_input = input("\nUser: ")
+        if user_input.lower() == "exit":
+            print("Goodbye!!!")
+            break
+        else:
+            result = qa_chain.invoke({"query": user_input})
+            print("ChatBot:", result['result'])
+
+if __name__ == "__main__":
+    main()
