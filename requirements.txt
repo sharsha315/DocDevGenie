@@ -9,3 +9,4 @@ langchain-community
 bs4
 langchain_ollama
 langchain_huggingface
+apify-client
